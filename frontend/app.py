@@ -9,454 +9,465 @@ from agent.graph import build_graph
 
 st.set_page_config(
     page_title="AI Data Science Agent",
-    page_icon="🤖",
+    page_icon="✦",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# === CUSTOM CSS ===
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-    * { font-family: 'Inter', sans-serif; }
+* { font-family: 'Inter', sans-serif; }
 
-    .stApp {
-        background: #0a0a0f;
-    }
+.stApp { background: #fafaf9; }
 
-    section[data-testid="stSidebar"] {
-        background: #0f0f1a;
-        border-right: 1px solid #1e1e2e;
-    }
+section[data-testid="stSidebar"] {
+    background: #ffffff;
+    border-right: 1px solid #e8e4f0;
+}
 
-    section[data-testid="stSidebar"] * {
-        color: #e2e8f0 !important;
-    }
+.sidebar-logo {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #7c6fcd;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.2rem;
+}
 
-    .hero-container {
-        text-align: center;
-        padding: 3rem 2rem 2rem;
-    }
+.sidebar-tagline {
+    font-size: 0.75rem;
+    color: #a89ec9;
+    margin-bottom: 1.5rem;
+}
 
-    .hero-badge {
-        display: inline-block;
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-        color: white;
-        font-size: 0.7rem;
-        font-weight: 600;
-        letter-spacing: 0.15em;
-        text-transform: uppercase;
-        padding: 0.4rem 1rem;
-        border-radius: 999px;
-        margin-bottom: 1.5rem;
-    }
+.sidebar-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #9991b8;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 0.4rem;
+    margin-top: 1rem;
+}
 
-    .hero-title {
-        font-size: 3rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #e2e8f0 0%, #a5b4fc 50%, #818cf8 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        line-height: 1.2;
-        margin-bottom: 1rem;
-    }
+.stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #f3f0ff;
+    border: 1px solid #e0d9f7;
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #7c6fcd;
+    margin-right: 0.4rem;
+    margin-top: 0.5rem;
+}
 
-    .hero-subtitle {
-        font-size: 1rem;
-        color: #64748b;
-        max-width: 500px;
-        margin: 0 auto 2rem;
-        line-height: 1.7;
-    }
+.hero-wrap {
+    padding: 3.5rem 2rem 2rem;
+    text-align: center;
+}
 
-    .flow-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 0.3rem;
-        flex-wrap: wrap;
-        margin: 1.5rem 0 2.5rem;
-    }
+.hero-chip {
+    display: inline-block;
+    background: #f3f0ff;
+    color: #7c6fcd;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    border: 1px solid #e0d9f7;
+    margin-bottom: 1.5rem;
+}
 
-    .flow-step {
-        background: #13131f;
-        border: 1px solid #1e1e2e;
-        color: #94a3b8;
-        font-size: 0.72rem;
-        font-weight: 500;
-        padding: 0.4rem 0.8rem;
-        border-radius: 6px;
-        letter-spacing: 0.03em;
-    }
+.hero-title {
+    font-size: 3.2rem;
+    font-weight: 700;
+    color: #2d2640;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+}
 
-    .flow-arrow {
-        color: #6366f1;
-        font-size: 0.8rem;
-    }
+.hero-title span {
+    background: linear-gradient(135deg, #a78bfa, #f9a8d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
 
-    .metric-card {
-        background: #0f0f1a;
-        border: 1px solid #1e1e2e;
-        border-radius: 12px;
-        padding: 1.2rem 1.5rem;
-        text-align: center;
-        transition: border-color 0.2s;
-    }
+.hero-sub {
+    font-size: 1rem;
+    color: #8b85a1;
+    max-width: 460px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.75;
+    font-weight: 400;
+}
 
-    .metric-card:hover {
-        border-color: #6366f1;
-    }
+.flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 3rem;
+}
 
-    .metric-value {
-        font-size: 1.8rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #a5b4fc, #818cf8);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
+.flow-chip {
+    background: #fff;
+    border: 1px solid #e8e4f0;
+    color: #6b6589;
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(124,111,205,0.06);
+}
 
-    .metric-label {
-        font-size: 0.75rem;
-        color: #475569;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin-top: 0.3rem;
-    }
+.flow-dot {
+    color: #c4b9f0;
+    font-size: 0.6rem;
+}
 
-    .section-title {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #6366f1;
-        text-transform: uppercase;
-        letter-spacing: 0.15em;
-        margin-bottom: 1rem;
-    }
+.card {
+    background: #ffffff;
+    border: 1px solid #ede9f8;
+    border-radius: 16px;
+    padding: 1.4rem 1.6rem;
+    box-shadow: 0 1px 4px rgba(124,111,205,0.07);
+    margin-bottom: 0.8rem;
+}
 
-    .reasoning-item {
-        display: flex;
-        gap: 0.8rem;
-        align-items: flex-start;
-        padding: 0.8rem 1rem;
-        background: #0f0f1a;
-        border: 1px solid #1e1e2e;
-        border-left: 3px solid #6366f1;
-        border-radius: 0 8px 8px 0;
-        margin-bottom: 0.5rem;
-    }
+.metric-big {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d2640;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
 
-    .reasoning-num {
-        color: #6366f1;
-        font-weight: 700;
-        font-size: 0.8rem;
-        min-width: 20px;
-    }
+.metric-sub {
+    font-size: 0.72rem;
+    color: #a89ec9;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 0.35rem;
+}
 
-    .reasoning-text {
-        color: #94a3b8;
-        font-size: 0.85rem;
-        line-height: 1.5;
-    }
+.section-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #a89ec9;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-bottom: 0.8rem;
+    margin-top: 1.5rem;
+}
 
-    .progress-node {
-        display: flex;
-        align-items: center;
-        gap: 0.8rem;
-        padding: 0.7rem 1rem;
-        background: #0f0f1a;
-        border: 1px solid #1e1e2e;
-        border-radius: 8px;
-        margin-bottom: 0.4rem;
-        animation: fadeIn 0.3s ease;
-    }
+.progress-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.1rem;
+    background: #fff;
+    border: 1px solid #ede9f8;
+    border-radius: 10px;
+    margin-bottom: 0.4rem;
+    box-shadow: 0 1px 3px rgba(124,111,205,0.05);
+}
 
-    .progress-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #6366f1;
-        box-shadow: 0 0 8px #6366f1;
-        flex-shrink: 0;
-    }
+.progress-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa, #f9a8d4);
+    flex-shrink: 0;
+}
 
-    .progress-text {
-        color: #94a3b8;
-        font-size: 0.85rem;
-    }
+.progress-label {
+    font-size: 0.84rem;
+    color: #5c5578;
+    font-weight: 500;
+}
 
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(4px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+.reasoning-row {
+    display: flex;
+    gap: 0.9rem;
+    align-items: flex-start;
+    padding: 0.85rem 1.1rem;
+    background: #fdfcff;
+    border: 1px solid #ede9f8;
+    border-left: 3px solid #c4b9f0;
+    border-radius: 0 10px 10px 0;
+    margin-bottom: 0.45rem;
+}
 
-    .report-box {
-        background: #0f0f1a;
-        border: 1px solid #1e1e2e;
-        border-radius: 12px;
-        padding: 1.5rem 2rem;
-        color: #94a3b8;
-        font-size: 0.85rem;
-        line-height: 1.8;
-        white-space: pre-wrap;
-        font-family: 'Inter', sans-serif;
-    }
+.r-num {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #a78bfa;
+    min-width: 22px;
+    padding-top: 0.05rem;
+}
 
-    .stButton > button {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        font-size: 0.9rem !important;
-        padding: 0.6rem 1.5rem !important;
-        width: 100% !important;
-        transition: opacity 0.2s !important;
-    }
+.r-text {
+    font-size: 0.84rem;
+    color: #5c5578;
+    line-height: 1.6;
+}
 
-    .stButton > button:hover {
-        opacity: 0.85 !important;
-    }
+.report-block {
+    background: #fff;
+    border: 1px solid #ede9f8;
+    border-radius: 14px;
+    padding: 1.8rem 2rem;
+    color: #5c5578;
+    font-size: 0.84rem;
+    line-height: 1.85;
+    white-space: pre-wrap;
+    box-shadow: 0 1px 4px rgba(124,111,205,0.06);
+}
 
-    div[data-testid="stFileUploader"] {
-        background: #0f0f1a !important;
-        border: 1px dashed #1e1e2e !important;
-        border-radius: 10px !important;
-    }
+.stButton > button {
+    background: linear-gradient(135deg, #a78bfa 0%, #f9a8d4 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    padding: 0.65rem 1.5rem !important;
+    width: 100% !important;
+    box-shadow: 0 4px 15px rgba(167,139,250,0.3) !important;
+    transition: opacity 0.2s !important;
+}
 
-    .stSelectbox > div > div {
-        background: #0f0f1a !important;
-        border: 1px solid #1e1e2e !important;
-        color: #e2e8f0 !important;
-        border-radius: 8px !important;
-    }
+.stButton > button:hover { opacity: 0.88 !important; }
 
-    .stTabs [data-baseweb="tab-list"] {
-        background: transparent !important;
-        gap: 0.5rem;
-        border-bottom: 1px solid #1e1e2e;
-    }
+div[data-testid="stFileUploader"] {
+    background: #fdfcff !important;
+    border: 1.5px dashed #ddd6fe !important;
+    border-radius: 10px !important;
+}
 
-    .stTabs [data-baseweb="tab"] {
-        background: transparent !important;
-        color: #475569 !important;
-        border: none !important;
-        font-size: 0.85rem !important;
-        font-weight: 500 !important;
-        padding: 0.5rem 1rem !important;
-    }
+.stSelectbox > div > div {
+    background: #fdfcff !important;
+    border: 1px solid #e0d9f7 !important;
+    border-radius: 8px !important;
+    color: #2d2640 !important;
+}
 
-    .stTabs [aria-selected="true"] {
-        color: #a5b4fc !important;
-        border-bottom: 2px solid #6366f1 !important;
-    }
+.stTabs [data-baseweb="tab-list"] {
+    background: transparent !important;
+    gap: 0.3rem;
+    border-bottom: 1px solid #ede9f8;
+    padding-bottom: 0;
+}
 
-    .stDataFrame {
-        background: #0f0f1a !important;
-    }
+.stTabs [data-baseweb="tab"] {
+    background: transparent !important;
+    color: #a89ec9 !important;
+    border: none !important;
+    font-size: 0.84rem !important;
+    font-weight: 500 !important;
+    padding: 0.5rem 1.1rem !important;
+    border-radius: 0 !important;
+}
 
-    div[data-testid="stMarkdownContainer"] p {
-        color: #94a3b8;
-    }
+.stTabs [aria-selected="true"] {
+    color: #7c6fcd !important;
+    border-bottom: 2px solid #a78bfa !important;
+}
 
-    .divider {
-        height: 1px;
-        background: linear-gradient(90deg, transparent, #1e1e2e, transparent);
-        margin: 1.5rem 0;
-    }
+.stProgress > div > div {
+    background: linear-gradient(90deg, #a78bfa, #f9a8d4) !important;
+    border-radius: 999px !important;
+}
 
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: #0a0a0f; }
-    ::-webkit-scrollbar-thumb { background: #1e1e2e; border-radius: 2px; }
+.stProgress > div {
+    background: #f3f0ff !important;
+    border-radius: 999px !important;
+}
+
+hr { border-color: #ede9f8 !important; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #fafaf9; }
+::-webkit-scrollbar-thumb { background: #ddd6fe; border-radius: 3px; }
 </style>
 """, unsafe_allow_html=True)
 
 
 # === SIDEBAR ===
 with st.sidebar:
-    st.markdown('<p class="section-title">Configuration</p>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-logo">✦ DS Agent</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-tagline">Intelligent ML pipeline</div>', unsafe_allow_html=True)
 
-    uploaded_file = st.file_uploader("Dataset", type=["csv"], label_visibility="collapsed")
+    st.markdown('<div class="sidebar-label">Dataset</div>', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("upload", type=["csv"], label_visibility="collapsed")
 
     if uploaded_file:
         df_preview = pd.read_csv(uploaded_file)
         uploaded_file.seek(0)
 
-        st.markdown('<p class="section-title" style="margin-top:1rem">Target Column</p>', unsafe_allow_html=True)
-        target_column = st.selectbox("target", options=df_preview.columns.tolist(), label_visibility="collapsed")
+        st.markdown(
+            f'<div><span class="stat-pill">⬡ {df_preview.shape[0]:,} rows</span>'
+            f'<span class="stat-pill">◈ {df_preview.shape[1]} cols</span></div>',
+            unsafe_allow_html=True
+        )
 
-        st.markdown('<p class="section-title" style="margin-top:1rem">Problem Type</p>', unsafe_allow_html=True)
-        problem_type = st.selectbox("problem", options=["classification", "regression"], label_visibility="collapsed")
+        st.markdown('<div class="sidebar-label">Target Column</div>', unsafe_allow_html=True)
+        target_column = st.selectbox("t", options=df_preview.columns.tolist(), label_visibility="collapsed")
 
-        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{df_preview.shape[0]:,}</div><div class="metric-label">Rows</div></div>', unsafe_allow_html=True)
-        with col2:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{df_preview.shape[1]}</div><div class="metric-label">Cols</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-label">Problem Type</div>', unsafe_allow_html=True)
+        problem_type = st.selectbox("p", options=["classification", "regression"], label_visibility="collapsed")
 
         st.markdown("<br>", unsafe_allow_html=True)
         run_button = st.button("Run Agent →")
     else:
         st.markdown("""
-        <div style="color: #475569; font-size: 0.8rem; line-height: 1.7; padding: 0.5rem 0;">
-            Upload a CSV file to get started.<br><br>
-            The agent will automatically:<br>
-            • Analyze your data<br>
-            • Select the best models<br>
-            • Train & evaluate<br>
-            • Generate a report
+        <div style="font-size:0.8rem; color:#b0a8cc; line-height:1.8; margin-top:0.5rem;">
+            Upload a CSV to begin.<br><br>
+            The agent will automatically<br>
+            analyze, train, and report.
         </div>
         """, unsafe_allow_html=True)
         run_button = False
 
 
-# === MAIN AREA ===
+# === MAIN ===
 if not uploaded_file:
-    # Hero screen
     st.markdown("""
-    <div class="hero-container">
-        <div class="hero-badge">Powered by LangGraph</div>
-        <div class="hero-title">AI Data Science<br>Agent</div>
-        <div class="hero-subtitle">
-            Upload any CSV dataset and let the agent reason through
-            preprocessing, model selection, training, and evaluation — automatically.
+    <div class="hero-wrap">
+        <div class="hero-chip">✦ Powered by LangGraph</div>
+        <div class="hero-title">Your data,<br><span>analyzed intelligently</span></div>
+        <div class="hero-sub">
+            Upload any CSV dataset. The agent reasons through your data,
+            selects the right models, trains, evaluates, and explains every decision.
         </div>
-        <div class="flow-container">
-            <div class="flow-step">EDA</div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-step">Model Selection</div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-step">Preprocessing</div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-step">Training</div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-step">Evaluation</div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-step">Report</div>
+        <div class="flow-row">
+            <div class="flow-chip">EDA</div>
+            <div class="flow-dot">◆</div>
+            <div class="flow-chip">Model Selection</div>
+            <div class="flow-dot">◆</div>
+            <div class="flow-chip">Preprocessing</div>
+            <div class="flow-dot">◆</div>
+            <div class="flow-chip">Training</div>
+            <div class="flow-dot">◆</div>
+            <div class="flow-chip">Evaluation</div>
+            <div class="flow-dot">◆</div>
+            <div class="flow-chip">Report</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 else:
-    # Preview
-    st.markdown('<p class="section-title">Dataset Preview</p>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">Dataset Preview</div>', unsafe_allow_html=True)
     st.dataframe(df_preview.head(8), use_container_width=True, hide_index=True)
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
 
-# === RUN AGENT ===
 if run_button:
     temp_path = f"temp_{uploaded_file.name}"
     with open(temp_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
     initial_state = {
-        "dataset_path": temp_path,
-        "target_column": target_column,
-        "problem_type": problem_type,
-        "df_raw": None, "df_processed": None,
-        "eda_summary": None, "is_imbalanced": False,
-        "missing_ratio": 0.0, "n_rows": 0, "n_features": 0,
-        "has_categorical": False, "preprocessing_steps": [],
-        "candidate_models": [], "model_results": {},
-        "best_model": None, "needs_optimization": False,
-        "iteration_count": 0, "reasoning": [],
-        "report": None, "confidence_score": 0.0,
+        "dataset_path": temp_path, "target_column": target_column,
+        "problem_type": problem_type, "df_raw": None, "df_processed": None,
+        "eda_summary": None, "is_imbalanced": False, "missing_ratio": 0.0,
+        "n_rows": 0, "n_features": 0, "has_categorical": False,
+        "preprocessing_steps": [], "candidate_models": [], "model_results": {},
+        "best_model": None, "needs_optimization": False, "iteration_count": 0,
+        "reasoning": [], "report": None, "confidence_score": 0.0,
     }
 
     node_labels = {
         "data_understanding": "Analyzing dataset structure & patterns",
-        "select_models":      "Selecting candidate models",
+        "select_models":      "Selecting candidate models based on data",
         "preprocessing":      "Preprocessing data adaptively",
-        "modeling":           "Training models",
+        "modeling":           "Training candidate models",
         "evaluation":         "Evaluating & comparing performance",
         "optimization":       "Optimizing hyperparameters",
         "report":             "Generating final report",
     }
 
-    st.markdown('<p class="section-title">Agent Progress</p>', unsafe_allow_html=True)
+    st.markdown('<div class="section-label">Agent Progress</div>', unsafe_allow_html=True)
     progress_bar = st.progress(0)
-    log_area = st.empty()
-    completed = []
+    log_placeholder = st.empty()
 
     graph = build_graph()
     final_state = None
+    completed = []
     total = len(node_labels)
 
     for step_output in graph.stream(initial_state):
         node_name = list(step_output.keys())[0]
         final_state = step_output[node_name]
         completed.append(node_name)
-
         progress_bar.progress(len(completed) / total)
 
-        log_html = ""
+        html = ""
         for n in completed:
-            label = node_labels.get(n, n)
-            log_html += f'<div class="progress-node"><div class="progress-dot"></div><div class="progress-text">{label}</div></div>'
-        log_area.markdown(log_html, unsafe_allow_html=True)
+            html += f'<div class="progress-item"><div class="progress-dot"></div><div class="progress-label">{node_labels.get(n, n)}</div></div>'
+        log_placeholder.markdown(html, unsafe_allow_html=True)
 
     progress_bar.progress(1.0)
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    # === RESULTS ===
     if final_state:
-        # Top metrics
         best = final_state.get("best_model", "N/A")
         conf = final_state.get("confidence_score", 0)
         iters = final_state.get("iteration_count", 0)
         n_models = len(final_state.get("model_results", {}))
 
         c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{best.replace("_", " ").title()}</div><div class="metric-label">Best Model</div></div>', unsafe_allow_html=True)
-        with c2:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{conf:.0%}</div><div class="metric-label">Confidence</div></div>', unsafe_allow_html=True)
-        with c3:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{iters}</div><div class="metric-label">Iterations</div></div>', unsafe_allow_html=True)
-        with c4:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{n_models}</div><div class="metric-label">Models Tested</div></div>', unsafe_allow_html=True)
+        for col, val, label in zip(
+            [c1, c2, c3, c4],
+            [best.replace("_"," ").title(), f"{conf:.0%}", str(iters), str(n_models)],
+            ["Best Model", "Confidence", "Iterations", "Models Tested"]
+        ):
+            with col:
+                st.markdown(f'<div class="card"><div class="metric-big">{val}</div><div class="metric-sub">{label}</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-
-        tab1, tab2, tab3, tab4 = st.tabs(["Best Model", "All Models", "Agent Reasoning", "Report"])
+        tab1, tab2, tab3, tab4 = st.tabs(["Best Model", "All Models", "Reasoning", "Report"])
 
         with tab1:
             results = final_state.get("model_results", {})
             if best and best in results:
                 skip = {"model_object", "y_test", "y_pred", "X_test", "best_params"}
                 metrics = {k: v for k, v in results[best].items() if k not in skip}
-                cols = st.columns(len(metrics))
+                cols = st.columns(len(metrics)) if metrics else []
                 for i, (k, v) in enumerate(metrics.items()):
                     with cols[i]:
-                        val = f"{v:.4f}" if isinstance(v, float) else str(v)
-                        st.markdown(f'<div class="metric-card"><div class="metric-value">{val}</div><div class="metric-label">{k.upper()}</div></div>', unsafe_allow_html=True)
+                        val_str = f"{v:.4f}" if isinstance(v, float) else str(v)
+                        st.markdown(f'<div class="card" style="text-align:center"><div class="metric-big">{val_str}</div><div class="metric-sub">{k.upper()}</div></div>', unsafe_allow_html=True)
 
         with tab2:
-            results = final_state.get("model_results", {})
             rows = []
-            for m, r in results.items():
+            for m, r in final_state.get("model_results", {}).items():
                 skip = {"model_object", "y_test", "y_pred", "X_test"}
                 row = {"Model": m}
-                row.update({k: round(v, 4) if isinstance(v, float) else v
-                            for k, v in r.items() if k not in skip})
+                row.update({k: round(v, 4) if isinstance(v, float) else v for k, v in r.items() if k not in skip})
                 rows.append(row)
             if rows:
                 st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
         with tab3:
-            reasoning = final_state.get("reasoning", [])
             html = ""
-            for i, r in enumerate(reasoning):
-                html += f'<div class="reasoning-item"><div class="reasoning-num">{i+1:02d}</div><div class="reasoning-text">{r}</div></div>'
+            for i, r in enumerate(final_state.get("reasoning", [])):
+                html += f'<div class="reasoning-row"><div class="r-num">{i+1:02d}</div><div class="r-text">{r}</div></div>'
             st.markdown(html, unsafe_allow_html=True)
 
         with tab4:
             report = final_state.get("report", "")
-            st.markdown(f'<div class="report-box">{report}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="report-block">{report}</div>', unsafe_allow_html=True)
 
     if os.path.exists(temp_path):
         os.remove(temp_path)
