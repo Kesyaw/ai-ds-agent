@@ -16,6 +16,12 @@ def log_experiment(run_name: str, params: dict, metrics: dict = {}):
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, "experiments.json")
 
+    # Convert numpy types ke Python native
+    def convert(obj):
+        if hasattr(obj, 'item'):
+            return obj.item()
+        return str(obj)
+
     entry = {"run_name": run_name, "params": params, "metrics": metrics}
 
     existing = []
@@ -28,8 +34,8 @@ def log_experiment(run_name: str, params: dict, metrics: dict = {}):
 
     existing.append(entry)
     with open(log_file, "w") as f:
-        json.dump(existing, f, indent=2)
-
+        json.dump(existing, f, indent=2, default=convert)
+        
 
 def get_model(model_name: str, problem_type: str, is_imbalanced: bool):
     if problem_type == "classification":
