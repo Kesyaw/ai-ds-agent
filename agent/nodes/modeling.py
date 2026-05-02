@@ -1,5 +1,5 @@
-﻿import mlflow
-import mlflow.sklearn
+﻿import json
+import os
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression, LinearRegression
@@ -10,51 +10,52 @@ from xgboost import XGBClassifier, XGBRegressor
 from agent.state import AgentState
 
 
-def get_model(model_name: str, problem_type: str, is_imbalanced: bool):
-    """Factory function - return model instance berdasarkan nama"""
+def log_experiment(run_name: str, params: dict, metrics: dict = {}):
+    """Simple logging ke JSON, pengganti MLflow untuk cloud"""
+    log_dir = "tracking"
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "experiments.json")
 
+    entry = {"run_name": run_name, "params": params, "metrics": metrics}
+
+    existing = []
+    if os.path.exists(log_file):
+        try:
+            with open(log_file, "r") as f:
+                existing = json.load(f)
+        except:
+            existing = []
+
+    existing.append(entry)
+    with open(log_file, "w") as f:
+        json.dump(existing, f, indent=2)
+
+
+def get_model(model_name: str, problem_type: str, is_imbalanced: bool):
     if problem_type == "classification":
         class_weight = "balanced" if is_imbalanced else None
         models = {
             "logistic_regression": LogisticRegression(
-                max_iter=1000,
-                class_weight=class_weight,
-                random_state=42
+                max_iter=1000, class_weight=class_weight, random_state=42
             ),
             "random_forest": RandomForestClassifier(
-                n_estimators=100,
-                class_weight=class_weight,
-                random_state=42
+                n_estimators=100, class_weight=class_weight, random_state=42
             ),
             "gradient_boosting": GradientBoostingClassifier(
-                n_estimators=100,
-                random_state=42
+                n_estimators=100, random_state=42
             ),
             "xgboost": XGBClassifier(
-                n_estimators=100,
-                random_state=42,
-                verbosity=0,
+                n_estimators=100, random_state=42, verbosity=0,
                 scale_pos_weight=10 if is_imbalanced else 1
             ),
         }
     else:
         models = {
             "linear_regression": LinearRegression(),
-            "random_forest": RandomForestRegressor(
-                n_estimators=100,
-                random_state=42
-            ),
-            "gradient_boosting": GradientBoostingRegressor(
-                n_estimators=100,
-                random_state=42
-            ),
-            "xgboost": XGBRegressor(
-                n_estimators=100,
-                random_state=42,
-                verbosity=0
-            ),
+            "random_forest": RandomForestRegressor(n_estimators=100, random_state=42),
+            "gradient_boosting": GradientBoostingRegressor(n_estimators=100, random_state=42),
+            "xgboost": XGBRegressor(n_estimators=100, random_state=42, verbosity=0),
         }
-
     return models.get(model_name)
 
 
@@ -67,10 +68,8 @@ def modeling_node(state: AgentState) -> AgentState:
     is_imbalanced = state["is_imbalanced"]
     candidate_models = state["candidate_models"]
     iteration = state.get("iteration_count", 0)
-
     reasoning = list(state.get("reasoning", []))
 
-    # === Split data ===
     X = df.drop(columns=[target])
     y = df[target]
 
@@ -81,11 +80,8 @@ def modeling_node(state: AgentState) -> AgentState:
 
     print(f"  [OK] Train: {X_train.shape}, Test: {X_test.shape}")
 
-    # === Setup MLflow ===
-    mlflow.set_experiment("ai-ds-agent")
     model_results = {}
 
-    # === Train setiap kandidat model ===
     for model_name in candidate_models:
         print(f"  [..] Training {model_name}...")
 
@@ -94,38 +90,27 @@ def modeling_node(state: AgentState) -> AgentState:
             print(f"  [!!] Model {model_name} tidak ditemukan, skip")
             continue
 
-        with mlflow.start_run(run_name=f"{model_name}_iter{iteration}", nested=True):
-            # Train
-            model.fit(X_train, y_train)
-            y_pred = model.predict(X_test)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
 
-            # Log params
-            mlflow.log_params({
-                "model": model_name,
-                "iteration": iteration,
-                "n_train": len(X_train),
-                "n_test": len(X_test),
-                "is_imbalanced": is_imbalanced,
-            })
+        log_experiment(
+            run_name=f"{model_name}_iter{iteration}",
+            params={"model": model_name, "iteration": iteration,
+                    "n_train": len(X_train), "is_imbalanced": is_imbalanced}
+        )
 
-            # Simpan hasil
-            model_results[model_name] = {
-                "model_object": model,
-                "y_test": y_test,
-                "y_pred": y_pred,
-                "X_test": X_test,
-            }
+        model_results[model_name] = {
+            "model_object": model,
+            "y_test": y_test,
+            "y_pred": y_pred,
+            "X_test": X_test,
+        }
 
-            # Log model ke MLflow
-            mlflow.sklearn.log_model(model, model_name)
-
-        print(f"  [OK] {model_name} selesai ditraining")
+        print(f"  [OK] {model_name} selesai")
 
     reasoning.append(
         f"Iterasi {iteration}: training {len(model_results)} model -> {list(model_results.keys())}"
     )
-
-    print(f"  [OK] Total model trained: {len(model_results)}")
 
     return {
         **state,

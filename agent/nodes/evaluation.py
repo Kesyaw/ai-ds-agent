@@ -1,5 +1,4 @@
-﻿import mlflow
-import numpy as np
+﻿import numpy as np
 from sklearn.metrics import (
     accuracy_score, f1_score, precision_score,
     recall_score, roc_auc_score,
@@ -48,10 +47,6 @@ def evaluation_node(state: AgentState) -> AgentState:
             metrics["rmse"] = round(np.sqrt(mean_squared_error(y_test, y_pred)), 4)
             metrics["mae"] = round(mean_absolute_error(y_test, y_pred), 4)
             metrics["r2"] = round(r2_score(y_test, y_pred), 4)
-
-        # Log metrics ke MLflow
-        with mlflow.start_run(run_name=f"eval_{model_name}_iter{iteration}", nested=True):
-            mlflow.log_metrics(metrics)
 
         evaluated_results[model_name] = {
             **result,

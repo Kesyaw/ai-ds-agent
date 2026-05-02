@@ -1,5 +1,4 @@
-﻿import mlflow
-import numpy as np
+﻿import numpy as np
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
@@ -136,16 +135,7 @@ def optimization_node(state: AgentState) -> AgentState:
         metric_name = "r2"
 
     improvement = score_after - score_before
-
-    # === Log ke MLflow ===
-    mlflow.set_experiment("ai-ds-agent")
-    with mlflow.start_run(run_name=f"tuned_{best_model_name}_iter{iteration}", nested=True):
-        mlflow.log_params(best_params)
-        mlflow.log_metric(f"{metric_name}_before_tuning", score_before)
-        mlflow.log_metric(f"{metric_name}_after_tuning", score_after)
-        mlflow.log_metric("improvement", improvement)
-        mlflow.sklearn.log_model(best_estimator, f"tuned_{best_model_name}")
-
+    
     # === Update model results dengan versi tuned ===
     model_results[best_model_name].update({
         "model_object": best_estimator,
