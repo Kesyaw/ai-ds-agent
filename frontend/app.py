@@ -413,11 +413,44 @@ if run_button:
                         with cols[i]:
                             val_str = f"{v:.4f}" if isinstance(v, float) else str(v)
                             color = metric_colors[i % len(metric_colors)]
-                            st.markdown(f'''
+                            st.markdown(f"""
                             <div class="card" style="text-align:center">
                                 <div class="metric-big" style="color:{color}">{val_str}</div>
                                 <div class="metric-sub">{k.upper()}</div>
-                            </div>''', unsafe_allow_html=True)
+                            </div>""", unsafe_allow_html=True)
+
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown('<div class="section-label">Feature Importance (SHAP)</div>', unsafe_allow_html=True)
+
+                model_obj = results[best].get("model_object")
+                X_test_data = results[best].get("X_test")
+
+                if model_obj is not None and X_test_data is not None:
+                    from tools.shap_tools import get_shap_explanation
+                    with st.spinner("Generating SHAP explanation..."):
+                        shap_result = get_shap_explanation(
+                            model_obj, X_test_data,
+                            best, final_state.get("problem_type", "classification")
+                        )
+
+                    if shap_result["status"] == "success" and shap_result["image_b64"]:
+                        img_html = f"""
+                        <div class="card" style="padding:1.5rem">
+                            <img src="data:image/png;base64,{shap_result['image_b64']}"
+                                 style="width:100%; border-radius:8px;" />
+                        </div>"""
+                        st.markdown(img_html, unsafe_allow_html=True)
+
+                        # Top 5 features sebagai pills
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        top5 = list(shap_result["importance_dict"].items())[:5]
+                        pills_html = '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">'
+                        for feat, val in top5:
+                            pills_html += f'<div style="background:#f3f0ff;border:1px solid #e0d9f7;border-radius:999px;padding:0.3rem 0.9rem;font-size:0.75rem;font-weight:600;color:#7c6fcd;">#{feat} <span style="color:#c4b9f0;font-weight:400;">{val:.3f}</span></div>'
+                        pills_html += "</div>"
+                        st.markdown(pills_html, unsafe_allow_html=True)
+                    else:
+                        st.info(f"SHAP tidak tersedia: {shap_result['status']}")
 
         with tab2:
             rows = []
