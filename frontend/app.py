@@ -318,6 +318,17 @@ if not uploaded_file:
     </div>
     """, unsafe_allow_html=True)
 
+    st.markdown("""
+    <div style="text-align:center; margin-top:1rem;">
+        <a href="http://localhost:8000/docs" target="_blank"
+        style="font-size:0.72rem; color:#c4b9f0; text-decoration:none;
+                border:1px solid #ede9f8; padding:0.3rem 0.8rem;
+                border-radius:999px; font-weight:600;">
+            ⚡ API Docs →
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
 else:
     st.markdown('<div class="section-label">Dataset Preview</div>', unsafe_allow_html=True)
     st.dataframe(df_preview.head(8), use_container_width=True, hide_index=True)
