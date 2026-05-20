@@ -682,7 +682,7 @@ if run_button and st.session_state.df_preview is not None:
         node_name = list(step_output.keys())[0]
         final_state = step_output[node_name]
         completed.append(node_name)
-        progress_bar.progress(len(completed) / total)
+        progress_bar.progress(min(len(completed) / total, 1.0))
 
         html = ""
         for n in completed:
