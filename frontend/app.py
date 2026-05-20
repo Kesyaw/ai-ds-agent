@@ -695,6 +695,8 @@ if run_button and st.session_state.df_preview is not None:
         log_placeholder.markdown(html, unsafe_allow_html=True)
 
     progress_bar.progress(1.0)
+    import gc
+    gc.collect()
     st.markdown("<br>", unsafe_allow_html=True)
 
     if final_state:
