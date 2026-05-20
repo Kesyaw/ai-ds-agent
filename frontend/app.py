@@ -276,6 +276,16 @@ section[data-testid="stSidebar"] {
     box-shadow: 0 4px 18px rgba(167,139,250,0.35) !important;
     transition: all 0.2s !important;
 }
+[data-testid="stButton"][key="back_btn"] > button {
+    background: #fff !important;
+    color: #a89ec9 !important;
+    border: 1px solid #ede9f8 !important;
+    box-shadow: none !important;
+    font-weight: 500 !important;
+    font-size: 0.8rem !important;
+    width: auto !important;
+    padding: 0.4rem 1rem !important;
+}
 .stButton > button:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 7px 26px rgba(167,139,250,0.45) !important;
@@ -556,6 +566,15 @@ if st.session_state.df_preview is None:
 else:
     # Dataset loaded — show preview
     df_preview = st.session_state.df_preview
+
+    col_back, _ = st.columns([1, 4])
+    with col_back:
+        if st.button("← Back", key="back_btn"):
+            st.session_state.df_preview = None
+            st.session_state.uploaded_path = None
+            st.session_state.target_column = None
+            st.session_state.source_label = None
+            st.rerun()
 
     st.markdown('<div class="section-label">Dataset Preview</div>', unsafe_allow_html=True)
 
