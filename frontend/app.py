@@ -359,7 +359,7 @@ SAMPLES = {
         "type": "classification",
         "tags": ["Classification", "Missing Values", "891 rows"],
         "tag_class": "",
-        "url": "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv",
+        "url": "https://raw.githubusercontent.com/Kesyaw/ai-ds-agent/main/samples/customer_churn_classification.csv",
     },
     "churn": {
         "label": "Customer Churn",
