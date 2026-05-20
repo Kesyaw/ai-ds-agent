@@ -83,7 +83,7 @@ def optimization_node(state: AgentState) -> AgentState:
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42,
-        stratify=y if problem_type == "classification" else None
+        stratify=y if problem_type == "classification" and y.nunique() < len(y) * 0.5 else None
     )
 
     # === Scoring metric ===

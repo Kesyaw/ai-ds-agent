@@ -66,4 +66,11 @@ def export_model_metadata(state: AgentState) -> str:
         "agent_reasoning": reasoning,
     }
 
-    return json.dumps(metadata, indent=2)
+    def convert(obj):
+        if hasattr(obj, 'item'):
+            return obj.item()
+        if hasattr(obj, 'tolist'):
+            return obj.tolist()
+        return str(obj)
+
+    return json.dumps(metadata, indent=2, default=convert)
