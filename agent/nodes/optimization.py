@@ -88,8 +88,18 @@ def optimization_node(state: AgentState) -> AgentState:
 
     # === Scoring metric ===
     scoring = "f1_weighted" if problem_type == "classification" else "r2"
-    if is_imbalanced:
-        scoring = "f1_weighted"
+
+    # Tentukan cv strategy — hindari stratified kalau class terlalu sedikit
+    from sklearn.model_selection import StratifiedKFold, KFold
+    if problem_type == "classification":
+        min_class_count = y_train.value_counts().min()
+        n_splits = min(3, int(min_class_count))
+        if n_splits < 2:
+            cv_strategy = 2
+        else:
+            cv_strategy = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    else:
+        cv_strategy = 3
 
     # === Tuning best model ===
     param_grid = PARAM_GRIDS.get(best_model_name, {})
@@ -107,9 +117,9 @@ def optimization_node(state: AgentState) -> AgentState:
     search = RandomizedSearchCV(
         estimator=base_model,
         param_distributions=param_grid,
-        n_iter=10,
+        n_iter=5,
         scoring=scoring,
-        cv=3,
+        cv=cv_strategy,
         random_state=42,
         n_jobs=-1,
         verbose=0,
