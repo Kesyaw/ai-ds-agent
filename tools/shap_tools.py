@@ -9,46 +9,94 @@ import base64
 
 def get_shap_explanation(model, X_test, model_name: str, problem_type: str):
     try:
-        # Kurangi sample size drastis untuk hemat memory
         X_sample = X_test.iloc[:min(30, len(X_test))].copy()
         feature_names = X_sample.columns.tolist()
 
-        tree_models = ["random_forest", "gradient_boosting", "xgboost", "lightgbm"]
-        is_tree = any(m in model_name for m in tree_models)
+        # Coba SHAP dulu
+        importance_dict = None
+        method_used = "shap"
 
-        if is_tree:
-            explainer = shap.TreeExplainer(model)
-            shap_values = explainer.shap_values(X_sample)
-        else:
-            explainer = shap.LinearExplainer(model, X_sample)
-            shap_values = explainer.shap_values(X_sample)
+        try:
+            tree_models = ["random_forest", "xgboost", "lightgbm"]
+            is_simple_tree = any(m in model_name for m in tree_models)
 
-        if isinstance(shap_values, list):
-            if len(shap_values) == 2:
-                sv = np.array(shap_values[1])
-            elif len(shap_values) > 2:
-                sv = np.mean([np.abs(np.array(s)) for s in shap_values], axis=0)
+            if is_simple_tree:
+                explainer = shap.TreeExplainer(model)
+                shap_values = explainer.shap_values(X_sample)
+            elif "gradient_boosting" in model_name:
+                # GradientBoosting pakai KernelExplainer (lebih lambat tapi support multiclass)
+                background = shap.maskers.Independent(X_sample, max_samples=10)
+                explainer = shap.Explainer(model.predict_proba if hasattr(model, "predict_proba") else model.predict, background)
+                shap_values = explainer(X_sample).values
             else:
-                sv = np.array(shap_values[0])
-        else:
-            sv = np.array(shap_values)
+                explainer = shap.LinearExplainer(model, X_sample)
+                shap_values = explainer.shap_values(X_sample)
 
-        if sv.ndim == 1:
-            sv = sv.reshape(1, -1)
-        if sv.ndim == 3:
-            sv = sv[:, :, 1] if sv.shape[2] == 2 else sv.mean(axis=2)
+            if isinstance(shap_values, list):
+                if len(shap_values) == 2:
+                    sv = np.array(shap_values[1])
+                else:
+                    sv = np.mean([np.abs(np.array(s)) for s in shap_values], axis=0)
+            else:
+                sv = np.array(shap_values)
 
-        if len(sv.shape) > 1 and sv.shape[1] != len(feature_names):
-            return {"image_b64": None, "importance_dict": {}, "status": "error: shape mismatch"}
+            if sv.ndim == 1:
+                sv = sv.reshape(1, -1)
+            if sv.ndim == 3:
+                sv = sv.mean(axis=2)
 
-        importance = np.abs(sv).mean(axis=0)
-        importance_dict = dict(sorted(
-            zip(feature_names, importance.tolist()),
-            key=lambda x: x[1], reverse=True
-        ))
+            importance = np.abs(sv).mean(axis=0)
 
-        # Plot kecil untuk hemat memory
-        top_n = min(10, len(feature_names))
+            if len(importance) == len(feature_names):
+                importance_dict = dict(sorted(
+                    zip(feature_names, importance.tolist()),
+                    key=lambda x: x[1], reverse=True
+                ))
+
+        except Exception:
+            importance_dict = None
+
+        # Fallback: permutation importance pakai sklearn
+        if importance_dict is None:
+            method_used = "permutation"
+            try:
+                from sklearn.inspection import permutation_importance
+                result = permutation_importance(
+                    model, X_sample,
+                    X_test["__target__"] if "__target__" in X_test.columns else np.zeros(len(X_sample)),
+                    n_repeats=3, random_state=42, n_jobs=-1
+                )
+                importance_dict = dict(sorted(
+                    zip(feature_names, result.importances_mean.tolist()),
+                    key=lambda x: x[1], reverse=True
+                ))
+            except Exception:
+                importance_dict = None
+
+        # Fallback 2: feature importance dari model langsung
+        if importance_dict is None:
+            method_used = "model_importance"
+            try:
+                if hasattr(model, "feature_importances_"):
+                    imp = model.feature_importances_
+                    importance_dict = dict(sorted(
+                        zip(feature_names, imp.tolist()),
+                        key=lambda x: x[1], reverse=True
+                    ))
+                elif hasattr(model, "coef_"):
+                    imp = np.abs(model.coef_).mean(axis=0) if model.coef_.ndim > 1 else np.abs(model.coef_[0])
+                    importance_dict = dict(sorted(
+                        zip(feature_names, imp.tolist()),
+                        key=lambda x: x[1], reverse=True
+                    ))
+            except Exception:
+                pass
+
+        if importance_dict is None:
+            return {"image_b64": None, "importance_dict": {}, "status": "error: all methods failed"}
+
+        # Plot
+        top_n = min(10, len(importance_dict))
         top_features = list(importance_dict.keys())[:top_n]
         top_values = list(importance_dict.values())[:top_n]
 
@@ -66,7 +114,9 @@ def get_shap_explanation(model, X_test, model_name: str, problem_type: str):
 
         ax.barh(top_features[::-1], top_values[::-1],
                 color=colors[::-1], height=0.55, edgecolor="none")
-        ax.set_xlabel("Mean |SHAP Value|", fontsize=9, color="#8b85a1")
+
+        label = "SHAP" if method_used == "shap" else "Feature Importance"
+        ax.set_xlabel(f"Mean |{label} Value|", fontsize=9, color="#8b85a1")
         ax.set_title(
             f"Feature Importance — {model_name.replace('_', ' ').title()}",
             fontsize=10, fontweight="bold", color="#2d2640", pad=12
@@ -80,7 +130,6 @@ def get_shap_explanation(model, X_test, model_name: str, problem_type: str):
 
         plt.tight_layout()
         buf = io.BytesIO()
-        # Turunkan DPI untuk hemat memory
         plt.savefig(buf, format="png", dpi=100, bbox_inches="tight", facecolor="#ffffff")
         plt.close(fig)
         plt.clf()
