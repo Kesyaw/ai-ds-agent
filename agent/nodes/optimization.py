@@ -1,5 +1,5 @@
 ﻿import numpy as np
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, KFold
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
@@ -9,28 +9,24 @@ from agent.state import AgentState
 
 PARAM_GRIDS = {
     "logistic_regression": {
-        "C": [0.01, 0.1, 1, 10, 100],
+        "C": [0.01, 0.1, 1, 10],
         "solver": ["liblinear", "lbfgs"],
         "max_iter": [500, 1000],
     },
     "random_forest": {
-        "n_estimators": [50, 100, 200],
-        "max_depth": [None, 5, 10, 20],
-        "min_samples_split": [2, 5, 10],
-        "min_samples_leaf": [1, 2, 4],
+        "n_estimators": [30, 50, 100],
+        "max_depth": [None, 5, 10],
+        "min_samples_split": [2, 5],
     },
     "gradient_boosting": {
-        "n_estimators": [50, 100, 200],
-        "learning_rate": [0.01, 0.05, 0.1, 0.2],
-        "max_depth": [3, 5, 7],
-        "subsample": [0.7, 0.8, 1.0],
+        "n_estimators": [30, 50, 100],
+        "learning_rate": [0.05, 0.1, 0.2],
+        "max_depth": [3, 5],
     },
     "xgboost": {
-        "n_estimators": [50, 100, 200],
-        "learning_rate": [0.01, 0.05, 0.1],
-        "max_depth": [3, 5, 7],
-        "subsample": [0.7, 0.8, 1.0],
-        "colsample_bytree": [0.7, 0.8, 1.0],
+        "n_estimators": [30, 50, 100],
+        "learning_rate": [0.05, 0.1],
+        "max_depth": [3, 5],
     },
     "linear_regression": {},
 }
@@ -38,20 +34,13 @@ PARAM_GRIDS = {
 
 def get_base_model(model_name: str, problem_type: str, is_imbalanced: bool):
     class_weight = "balanced" if is_imbalanced else None
-
     if problem_type == "classification":
         models = {
-            "logistic_regression": LogisticRegression(
-                class_weight=class_weight, random_state=42
-            ),
-            "random_forest": RandomForestClassifier(
-                class_weight=class_weight, random_state=42
-            ),
+            "logistic_regression": LogisticRegression(class_weight=class_weight, random_state=42),
+            "random_forest": RandomForestClassifier(class_weight=class_weight, random_state=42),
             "gradient_boosting": GradientBoostingClassifier(random_state=42),
-            "xgboost": XGBClassifier(
-                random_state=42, verbosity=0,
-                scale_pos_weight=10 if is_imbalanced else 1
-            ),
+            "xgboost": XGBClassifier(random_state=42, verbosity=0,
+                                      scale_pos_weight=10 if is_imbalanced else 1),
         }
     else:
         models = {
@@ -60,7 +49,6 @@ def get_base_model(model_name: str, problem_type: str, is_imbalanced: bool):
             "gradient_boosting": GradientBoostingRegressor(random_state=42),
             "xgboost": XGBRegressor(random_state=42, verbosity=0),
         }
-
     return models.get(model_name)
 
 
@@ -74,7 +62,6 @@ def optimization_node(state: AgentState) -> AgentState:
     best_model_name = state["best_model"]
     model_results = state["model_results"]
     iteration = state.get("iteration_count", 0)
-
     reasoning = list(state.get("reasoning", []))
 
     from sklearn.model_selection import train_test_split
@@ -86,50 +73,46 @@ def optimization_node(state: AgentState) -> AgentState:
         stratify=y if problem_type == "classification" and y.nunique() < len(y) * 0.5 else None
     )
 
-    # === Scoring metric ===
-    scoring = "f1_weighted" if problem_type == "classification" else "r2"
-
-    # Tentukan cv strategy — hindari stratified kalau class terlalu sedikit
-    from sklearn.model_selection import StratifiedKFold, KFold
-    if problem_type == "classification":
-        min_class_count = y_train.value_counts().min()
-        n_splits = min(3, int(min_class_count))
-        if n_splits < 2:
-            cv_strategy = 2
-        else:
-            cv_strategy = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
-    else:
-        cv_strategy = 3
-
-    # === Tuning best model ===
     param_grid = PARAM_GRIDS.get(best_model_name, {})
-
     if not param_grid:
         print(f"  [!] Tidak ada param grid untuk {best_model_name} -> skip tuning")
         reasoning.append(f"Skip tuning {best_model_name} - tidak ada hyperparameter yang bisa dioptimasi")
         return {**state, "reasoning": reasoning}
 
     base_model = get_base_model(best_model_name, problem_type, is_imbalanced)
+    scoring = "f1_weighted" if problem_type == "classification" else "r2"
+
+    # === Tentukan CV yang aman ===
+    # Selalu pakai KFold biasa — lebih robust, hindari masalah stratified
+    n_splits = 3
+    if len(X_train) < 30:
+        n_splits = 2
+    cv_strategy = KFold(n_splits=n_splits, shuffle=True, random_state=42)
 
     print(f"  [..] RandomizedSearchCV untuk {best_model_name}...")
-    print(f"       Scoring: {scoring}, n_iter=10, cv=3")
+    print(f"       Scoring: {scoring}, n_iter=5, cv={n_splits}")
 
-    search = RandomizedSearchCV(
-        estimator=base_model,
-        param_distributions=param_grid,
-        n_iter=5,
-        scoring=scoring,
-        cv=cv_strategy,
-        random_state=42,
-        n_jobs=-1,
-        verbose=0,
-    )
+    try:
+        search = RandomizedSearchCV(
+            estimator=base_model,
+            param_distributions=param_grid,
+            n_iter=5,
+            scoring=scoring,
+            cv=cv_strategy,
+            random_state=42,
+            n_jobs=-1,
+            verbose=0,
+            error_score=0,
+        )
+        search.fit(X_train, y_train)
+        best_params = search.best_params_
+        best_estimator = search.best_estimator_
+    except Exception as e:
+        print(f"  [!] Optimization gagal: {e} -> pakai model default")
+        reasoning.append(f"Optimization gagal ({str(e)[:80]}) -> tetap pakai model default")
+        return {**state, "reasoning": reasoning}
 
-    search.fit(X_train, y_train)
-    best_params = search.best_params_
-    best_estimator = search.best_estimator_
-
-    # === Evaluasi sebelum vs sesudah ===
+    # === Evaluasi before vs after ===
     y_pred_tuned = best_estimator.predict(X_test)
 
     if problem_type == "classification":
@@ -145,8 +128,7 @@ def optimization_node(state: AgentState) -> AgentState:
         metric_name = "r2"
 
     improvement = score_after - score_before
-    
-    # === Update model results dengan versi tuned ===
+
     model_results[best_model_name].update({
         "model_object": best_estimator,
         "y_pred": y_pred_tuned,
@@ -155,22 +137,19 @@ def optimization_node(state: AgentState) -> AgentState:
         "tuned": True,
     })
 
-    # === Reasoning ===
     reasoning.append(
         f"Tuning {best_model_name}: {metric_name} {score_before:.4f} -> {score_after:.4f} "
         f"(improvement: {improvement:+.4f})"
     )
-    reasoning.append(f"Best params setelah tuning: {best_params}")
 
     if improvement > 0:
         reasoning.append(f"Tuning berhasil meningkatkan performa sebesar {improvement:.4f}")
     else:
-        reasoning.append(f"Tuning tidak meningkatkan performa - model default sudah optimal")
+        reasoning.append("Tuning tidak meningkatkan performa - model default sudah optimal")
 
     print(f"  [OK] {metric_name} sebelum: {score_before:.4f}")
     print(f"  [OK] {metric_name} sesudah: {score_after:.4f}")
     print(f"  [OK] Improvement: {improvement:+.4f}")
-    print(f"  [OK] Best params: {best_params}")
 
     return {
         **state,
